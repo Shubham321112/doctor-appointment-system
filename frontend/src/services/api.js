@@ -93,30 +93,37 @@ const api = {
     return result;
   },
 
+  
   // =========================
-  // BOOK APPOINTMENT
+  // BOOK APPOINTMENT + REPORTS
   // =========================
   bookAppointment: async (
     doctor,
     date,
     time,
     reason,
-    token
+    token,
+    reports = []
   ) => {
+    const formData = new FormData();
+
+    formData.append("doctor", doctor);
+    formData.append("date", date);
+    formData.append("time", time);
+    formData.append("reason", reason || "");
+
+    reports.forEach((file) => {
+      formData.append("reports", file);
+    });
+
     const response = await fetch(
       `${API_URL}/appointments/book`,
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          doctor,
-          date,
-          time,
-          reason,
-        }),
+        body: formData,
       }
     );
 
@@ -124,13 +131,13 @@ const api = {
 
     if (!response.ok) {
       throw new Error(
-        result.message ||
-          "Failed to book appointment"
+        result.message || "Failed to book appointment"
       );
     }
 
     return result;
   },
+
 
   // =========================
   // MY APPOINTMENTS

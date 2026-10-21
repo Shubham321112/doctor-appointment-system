@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -11,173 +12,283 @@ function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-
+  const handleLogin = async (event) => {
+    event.preventDefault();
     setError("");
-    setLoading(true);
+    setSuccess("");
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (!password) {
+      setError("Please enter your password.");
+      return;
+    }
 
     try {
-      // Email and password are passed separately
-      const data = await api.login(
-        email,
-        password
-      );
+      setLoading(true);
 
-      // Save user and token in Redux + localStorage
+      const data = await api.login(normalizedEmail, password);
+
+      if (!data?.user || !data?.token) {
+        throw new Error("Login response is incomplete. Please try again.");
+      }
+
       dispatch(loginSuccess(data));
 
-      // Redirect according to user role
-      if (data.user.role === "admin") {
-        navigate("/admin-dashboard");
-      } else if (data.user.role === "doctor") {
-        navigate("/doctor-dashboard");
+      setSuccess("Login successful! Redirecting...");
+
+      // Let the success message appear before navigating.
+      const role = data.user.role;
+
+      if (role === "admin") {
+        navigate("/admin-dashboard", { replace: true });
+      } else if (role === "doctor") {
+        navigate("/doctor-dashboard", { replace: true });
       } else {
-        navigate("/dashboard");
+        navigate("/profile", { replace: true });
       }
-    } catch (error) {
-      setError(
-        error.message || "Login failed"
-      );
+    } catch (err) {
+      setError(err.message || "Unable to log in. Please check your details.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#fdf2f8] flex items-center justify-center px-4">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-4 py-10 sm:px-6">
+      <div className="pointer-events-none absolute -left-28 -top-28 h-80 w-80 rounded-full bg-teal-100/70 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-20 h-96 w-96 rounded-full bg-cyan-100/70 blur-3xl" />
 
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl lg:grid-cols-2">
+        {/* Left panel */}
+        <section className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-teal-800 via-teal-700 to-cyan-600 p-10 text-white lg:flex xl:p-12">
+          <div className="pointer-events-none absolute -right-20 top-24 h-72 w-72 rounded-full border-[45px] border-white/10" />
+          <div className="pointer-events-none absolute -bottom-20 -left-16 h-64 w-64 rounded-full bg-white/5" />
 
-        {/* ================= HEADER ================= */}
-        <div className="bg-purple-600 text-white text-center py-6">
+          <div className="relative">
+            <Link to="/" className="inline-flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-2xl">
+                ✚
+              </span>
+              <span className="text-xl font-bold tracking-tight">
+                MediCare
+              </span>
+            </Link>
 
-          <div className="text-4xl mb-2">
-            🩺
+            <div className="mt-20">
+              <span className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider">
+                Your health matters
+              </span>
+
+              <h1 className="mt-6 text-4xl font-bold leading-tight xl:text-5xl">
+                Better care,
+                <br />
+                healthier lives.
+              </h1>
+
+              <p className="mt-5 max-w-md text-base leading-8 text-teal-50">
+                Book appointments with doctors, manage your visits, and keep
+                your healthcare journey organised in one place.
+              </p>
+            </div>
           </div>
 
-          <h1 className="text-2xl font-bold">
-            Doctor Appointment System
-          </h1>
+          <div className="relative mt-12 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-sm">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-xl">
+                ✓
+              </span>
+              <div>
+                <p className="font-semibold">Healthcare made simpler</p>
+                <p className="mt-1 text-sm leading-6 text-teal-50">
+                  Access your account and manage your appointments securely.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-          <p className="text-purple-100 mt-1">
-            Login to your account
-          </p>
-
-        </div>
-
-        {/* ================= FORM ================= */}
-        <div className="p-8">
-
-          <form
-            onSubmit={handleLogin}
-            className="space-y-5"
+        {/* Login form */}
+        <section className="p-6 sm:p-10 lg:p-12 xl:p-14">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-lg font-bold text-teal-800 lg:hidden"
           >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-xl">
+              ✚
+            </span>
+            MediCare
+          </Link>
 
-            {/* Error */}
+          <div className="mt-8 lg:mt-4">
+            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-2xl text-teal-700">
+              👋
+            </div>
+
+            <p className="text-sm font-bold uppercase tracking-wider text-teal-700">
+              Welcome back
+            </p>
+
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Sign in to your account
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              Enter your registered email and password to continue.
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} className="mt-8 space-y-5">
             {error && (
-              <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
+              <div
+                role="alert"
+                className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+              >
+                <span className="font-bold">!</span>
+                <p className="break-words">{error}</p>
               </div>
             )}
 
-            {/* Email */}
-            <div>
+            {success && (
+              <div
+                role="status"
+                className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700"
+              >
+                {success}
+              </div>
+            )}
 
-              <label className="block text-gray-700 font-medium mb-2">
-                Email
+            <div>
+              <label
+                htmlFor="login-email"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Email address
               </label>
 
               <input
+                id="login-email"
                 type="email"
+                autoComplete="email"
                 value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                placeholder="Enter your email"
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
                 required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={loading}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10 disabled:bg-slate-50"
               />
-
             </div>
 
-            {/* Password */}
             <div>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label
+                  htmlFor="login-password"
+                  className="block text-sm font-semibold text-slate-700"
+                >
+                  Password
+                </label>
+                <span className="text-xs text-slate-400">
+                  Keep it private
+                </span>
+              </div>
 
-              <label className="block text-gray-700 font-medium mb-2">
-                Password
-              </label>
-
-              <input
-                type="password"
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                placeholder="Enter your password"
-                required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-purple-500"
-              />
-
-            </div>
-
-            {/* Remember / Forgot */}
-            <div className="flex items-center justify-between text-sm">
-
-              <label className="flex items-center gap-2 text-gray-600">
-
+              <div className="relative">
                 <input
-                  type="checkbox"
-                  className="accent-purple-600"
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  disabled={loading}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-20 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-600/10 disabled:bg-slate-50"
                 />
 
-                Remember me
-
-              </label>
-
-              <button
-                type="button"
-                className="text-purple-600 hover:underline"
-              >
-                Forgot Password?
-              </button>
-
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-bold text-teal-700 transition hover:bg-teal-50"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
 
-            {/* Login Button */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(event) => setRememberMe(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 accent-teal-700"
+                />
+                Remember me
+              </label>
+
+              <span
+                title="Password recovery is not configured yet."
+                className="cursor-help text-sm font-medium text-slate-400"
+              >
+                Forgot password?
+              </span>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold py-3 rounded-lg transition"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-800 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading
-                ? "Logging in..."
-                : "Login"}
+              {loading ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign In
+                  <span>→</span>
+                </>
+              )}
             </button>
-
           </form>
 
-          {/* Signup */}
-          <p className="text-center text-gray-600 mt-6">
+          <div className="my-7 flex items-center gap-4">
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-xs font-medium text-slate-400">
+              NEW TO MEDICARE?
+            </span>
+            <div className="h-px flex-1 bg-slate-200" />
+          </div>
 
+          <p className="text-center text-sm text-slate-600">
             Don't have an account?{" "}
-
             <Link
               to="/signup"
-              className="text-purple-600 font-semibold hover:underline"
+              className="font-bold text-teal-700 transition hover:text-teal-900 hover:underline"
             >
-              Sign Up
+              Create an account
             </Link>
-
           </p>
 
-        </div>
+          <p className="mt-8 text-center text-xs leading-5 text-slate-400">
+            By signing in, you agree to use this service responsibly.
+          </p>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
 

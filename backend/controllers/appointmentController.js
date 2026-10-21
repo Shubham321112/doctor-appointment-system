@@ -1,16 +1,89 @@
 const Appointment = require("../models/Appointment");
 const User = require("../models/user");
 
-// Get day name from YYYY-MM-DD
-const getDayName = (dateString) => {
-  const date = new Date(`${dateString}T00:00:00`);
+const MAX_REPORTS = 3;
+const MAX_FILE_SIZE = 1 * 1024 * 1024;
 
-  if (Number.isNaN(date.getTime())) {
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+];
+
+// Check actual file signature.
+const hasValidSignature = (file) => {
+  if (!file?.buffer || file.buffer.length < 4) {
+    return false;
+  }
+
+  const buffer = file.buffer;
+
+  if (file.mimetype === "application/pdf") {
+    return buffer.subarray(0, 5).toString() === "%PDF-";
+  }
+
+  if (file.mimetype === "image/jpeg") {
+    return (
+      buffer[0] === 0xff &&
+      buffer[1] === 0xd8 &&
+      buffer[2] === 0xff
+    );
+  }
+
+  if (file.mimetype === "image/png") {
+    return (
+      buffer.length >= 8 &&
+      buffer
+        .subarray(0, 8)
+        .equals(
+          Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+        )
+    );
+  }
+
+  return false;
+};
+
+// Never send the binary contents of reports in normal responses.
+const safeAppointment = (appointment) => {
+  const data = appointment.toObject
+    ? appointment.toObject()
+    : { ...appointment };
+
+  if (Array.isArray(data.reports)) {
+    data.reports = data.reports.map((report) => {
+      const { fileData, ...metadata } = report;
+      return metadata;
+    });
+  }
+
+  return data;
+};
+
+const safeAppointments = (appointments) =>
+  appointments.map(safeAppointment);
+
+// Get weekday from YYYY-MM-DD.
+const getDayName = (dateString) => {
+  if (
+    typeof dateString !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(dateString)
+  ) {
+    return null;
+  }
+
+  const date = new Date(`${dateString}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== dateString
+  ) {
     return null;
   }
 
   return date.toLocaleDateString("en-US", {
     weekday: "long",
+    timeZone: "UTC",
   });
 };
 
@@ -18,6 +91,7 @@ const getDayName = (dateString) => {
 const createAppointment = async (req, res) => {
   try {
     const { doctor, date, time, reason } = req.body;
+    const files = req.files || [];
 
     if (!doctor || !date || !time) {
       return res.status(400).json({
@@ -31,8 +105,55 @@ const createAppointment = async (req, res) => {
       });
     }
 
+    if (
+      typeof doctor !== "string" ||
+      typeof date !== "string" ||
+      typeof time !== "string" ||
+      (reason !== undefined && typeof reason !== "string")
+    ) {
+      return res.status(400).json({
+        message: "Invalid appointment details",
+      });
+    }
+
+    if (reason && reason.length > 1000) {
+      return res.status(400).json({
+        message: "Reason must not exceed 1000 characters",
+      });
+    }
+
+    if (files.length > MAX_REPORTS) {
+      return res.status(400).json({
+        message: `You can upload a maximum of ${MAX_REPORTS} reports`,
+      });
+    }
+
+    for (const file of files) {
+      if (
+        !ALLOWED_TYPES.includes(file.mimetype) ||
+        !file.buffer ||
+        file.size === 0 ||
+        file.size > MAX_FILE_SIZE ||
+        !hasValidSignature(file)
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid report. Upload valid PDF, JPG or PNG files up to 1 MB each.",
+        });
+      }
+    }
+
+    const dayName = getDayName(date);
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (!dayName || date < today) {
+      return res.status(400).json({
+        message: "Please select a valid current or future date",
+      });
+    }
+
     const doctorUser = await User.findOne({
-      name: doctor,
+      name: doctor.trim(),
       role: "doctor",
     });
 
@@ -42,16 +163,8 @@ const createAppointment = async (req, res) => {
       });
     }
 
-    const dayName = getDayName(date);
-
-    if (!dayName) {
-      return res.status(400).json({
-        message: "Invalid appointment date",
-      });
-    }
-
-    const dayAvailability = doctorUser.availability.find(
-      (item) => item.day === dayName
+    const dayAvailability = (doctorUser.availability || []).find(
+      (item) => item.day?.toLowerCase() === dayName.toLowerCase()
     );
 
     if (!dayAvailability) {
@@ -60,17 +173,17 @@ const createAppointment = async (req, res) => {
       });
     }
 
-    if (!dayAvailability.slots.includes(time)) {
+    if (!(dayAvailability.slots || []).includes(time)) {
       return res.status(400).json({
-        message:
-          "Selected time is not available for this doctor",
+        message: "Selected time is not available for this doctor",
       });
     }
 
     const existingAppointment = await Appointment.findOne({
-      doctor,
+      doctor: doctorUser.name,
       date,
       time,
+      status: { $ne: "cancelled" },
     });
 
     if (existingAppointment) {
@@ -80,18 +193,28 @@ const createAppointment = async (req, res) => {
       });
     }
 
+    const reportDocuments = files.map((file) => ({
+      fileName: file.originalname
+        .replace(/[\\/]/g, "_")
+        .slice(0, 150),
+      mimeType: file.mimetype,
+      fileData: file.buffer,
+      uploadedAt: new Date(),
+    }));
+
     const appointment = await Appointment.create({
       patient: req.user,
-      doctor,
+      doctor: doctorUser.name,
       date,
       time,
       reason: reason || "",
       status: "pending",
+      reports: reportDocuments,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Appointment booked successfully",
-      appointment,
+      appointment: safeAppointment(appointment),
     });
   } catch (error) {
     console.error("Appointment Error:", error);
@@ -103,8 +226,8 @@ const createAppointment = async (req, res) => {
       });
     }
 
-    res.status(500).json({
-      message: "Server error",
+    return res.status(500).json({
+      message: "Server error while booking appointment",
     });
   }
 };
@@ -121,17 +244,18 @@ const getMyAppointments = async (req, res) => {
     const appointments = await Appointment.find({
       patient: req.user,
     })
+      .select("-reports.fileData")
       .populate("patient", "name email contact")
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Appointments fetched successfully",
-      appointments,
+      appointments: safeAppointments(appointments),
     });
   } catch (error) {
     console.error("Get Appointments Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }
@@ -171,17 +295,16 @@ const cancelMyAppointment = async (req, res) => {
     }
 
     appointment.status = "cancelled";
-
     await appointment.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Appointment cancelled successfully",
-      appointment,
+      appointment: safeAppointment(appointment),
     });
   } catch (error) {
     console.error("Cancel Appointment Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }
@@ -209,10 +332,11 @@ const getDoctorAppointments = async (req, res) => {
     const appointments = await Appointment.find({
       doctor: doctorUser.name,
     })
+      .select("-reports.fileData")
       .populate("patient", "name email contact")
       .sort({ date: 1, time: 1, createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Doctor appointments fetched successfully",
       doctor: {
         id: doctorUser._id,
@@ -221,12 +345,12 @@ const getDoctorAppointments = async (req, res) => {
         contact: doctorUser.contact,
         availability: doctorUser.availability,
       },
-      appointments,
+      appointments: safeAppointments(appointments),
     });
   } catch (error) {
     console.error("Doctor Appointments Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }
@@ -242,17 +366,18 @@ const getAllAppointments = async (req, res) => {
     }
 
     const appointments = await Appointment.find()
+      .select("-reports.fileData")
       .populate("patient", "name email contact")
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "All appointments fetched successfully",
-      appointments,
+      appointments: safeAppointments(appointments),
     });
   } catch (error) {
     console.error("All Appointments Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }
@@ -276,9 +401,7 @@ const updateAppointmentStatus = async (req, res) => {
       });
     }
 
-    const doctorUser = await User.findById(req.user).select(
-      "name role"
-    );
+    const doctorUser = await User.findById(req.user).select("name role");
 
     if (!doctorUser) {
       return res.status(404).json({
@@ -298,22 +421,18 @@ const updateAppointmentStatus = async (req, res) => {
     }
 
     appointment.status = status;
-
     await appointment.save();
 
-    await appointment.populate(
-      "patient",
-      "name email contact"
-    );
+    await appointment.populate("patient", "name email contact");
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Appointment status updated successfully",
-      appointment,
+      appointment: safeAppointment(appointment),
     });
   } catch (error) {
     console.error("Update Status Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }
@@ -338,13 +457,13 @@ const deleteAppointment = async (req, res) => {
 
     await Appointment.findByIdAndDelete(req.params.id);
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Appointment deleted successfully",
     });
   } catch (error) {
     console.error("Delete Appointment Error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Server error",
     });
   }

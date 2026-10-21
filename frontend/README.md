@@ -1,108 +1,120 @@
 # 🩺 Doctor Appointment System
 
-A full-stack Doctor Appointment Management System that allows patients to book appointments with doctors based on their availability. Doctors can manage appointments, while administrators can manage doctors, patients, availability, and appointments.
+A full-stack Doctor Appointment System built using React, Node.js, Express.js, MongoDB, JWT authentication, Redux Toolkit and Tailwind CSS.
 
----
+The application provides separate workflows for Patients, Doctors and Admins.
 
-## 📌 Project Overview
+## 🚀 Live Demo
 
-The Doctor Appointment System is a web-based application designed to simplify the process of booking and managing doctor appointments.
+### Frontend
+https://doctor-appointment-system-alpha.vercel.app
 
-The system provides separate dashboards and functionality for:
-
-- 👤 Patients
-- 👨‍⚕️ Doctors
-- 🛡️ Administrators
-
-Patients can select a doctor, choose an available date and time slot, and book an appointment.
-
-Doctors can view their appointments and confirm or cancel them.
-
-Administrators can create doctors, manage doctor availability, manage patients, and manage all appointments.
-
----
+### Backend API
+https://doctor-appointment-system-p2pw.onrender.com
 
 ## ✨ Features
 
-### 👤 Patient Features
+### 👤 Patient
 
-- Patient Registration
-- Patient Login
-- JWT Authentication
-- Patient Dashboard
-- View Available Doctors
-- View Doctor Availability
-- Select Appointment Date
-- Select Available Time Slot
-- Book Appointment
-- View My Appointments
-- Cancel Appointment
-- View Appointment Status
-- View Profile
+- Patient registration and login
+- JWT authentication
+- Patient dashboard
+- View available doctors
+- View doctor availability
+- Book appointments
+- View my appointments
+- Cancel appointments
+- View profile
 - Logout
 
----
+### 👨‍⚕️ Doctor
 
-### 👨‍⚕️ Doctor Features
-
-- Doctor Login
-- Doctor Dashboard
-- View Doctor Profile
-- View Working Days
-- View Available Time Slots
-- View Patient Appointments
-- View Patient Details
-- Confirm Appointments
-- Cancel Appointments
-- Appointment Statistics
-- Refresh Dashboard
+- Doctor login
+- Doctor dashboard
+- View appointment statistics
+- View patient appointments
+- Confirm appointments
+- Cancel appointments
+- View profile
 - Logout
 
----
+### 🛠️ Admin
 
-### 🛡️ Admin Features
+- Admin login
+- Admin dashboard
+- View system statistics
+- Create doctors
+- Manage doctors
+- Manage patients
+- Manage appointments
+- Set doctor availability
+- Update doctor availability
+- Delete users
+- Delete appointments
 
-- Admin Login
-- Admin Dashboard
-- Dashboard Statistics
-- Add New Doctor
-- Create Doctor Account
-- Configure Doctor Availability
-- Edit Doctor Availability
-- View Doctor List
-- Delete Doctor
-- View Patient List
-- Delete Patient
-- View All Appointments
-- Delete Appointments
-- View Appointment Statistics
-- Manage Users
+## 🧰 Tech Stack
 
----
+### Frontend
 
-## 🔄 Appointment Flow
+- React.js
+- Vite
+- React Router DOM
+- Redux Toolkit
+- React Redux
+- Tailwind CSS
+- JavaScript
+
+### Backend
+
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- JWT
+- bcryptjs
+- CORS
+- Morgan
+
+### Deployment
+
+- Frontend: Vercel
+- Backend: Render
+- Database: MongoDB Atlas
+
+## 📁 Project Structure
 
 ```text
-Patient
-   ↓
-Login / Signup
-   ↓
-Select Doctor
-   ↓
-Select Date
-   ↓
-Check Doctor Availability
-   ↓
-Select Available Time Slot
-   ↓
-Enter Reason
-   ↓
-Book Appointment
-   ↓
-Appointment Status: Pending
-   ↓
-Doctor Reviews Appointment
-   ↓
-Confirm / Cancel
-   ↓
-Patient Sees Updated Status
+doctor-appointment/
+│
+├── backend/
+│   ├── config/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── app.js
+│   ├── server.js
+│   └── package.json
+│
+├── frontend/
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── store/
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── package.json
+│   └── vite.config.js
+│
+├── screenshots/
+│   ├── login.png
+│   ├── signup.png
+│   ├── patient-dashboard.png
+│   ├── book-appointment.png
+│   ├── my-appointments.png
+│   ├── doctor-dashboard.png
+│   └── admin-dashboard.png
+│
+├── .gitignore
+└── README.md

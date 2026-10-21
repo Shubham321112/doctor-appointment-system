@@ -1,4 +1,26 @@
+
 const mongoose = require("mongoose");
+
+const reportSchema = new mongoose.Schema(
+  {
+    fileName: {
+      type: String,
+      trim: true,
+    },
+    mimeType: {
+      type: String,
+      enum: ["application/pdf", "image/jpeg", "image/png"],
+    },
+    fileData: {
+      type: Buffer,
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
 
 const appointmentSchema = new mongoose.Schema(
   {
@@ -30,6 +52,11 @@ const appointmentSchema = new mongoose.Schema(
       trim: true,
     },
 
+    reports: {
+      type: [reportSchema],
+      default: [],
+    },
+
     status: {
       type: String,
       enum: ["pending", "confirmed", "cancelled"],
@@ -41,8 +68,6 @@ const appointmentSchema = new mongoose.Schema(
   }
 );
 
-// Prevent double booking for the same doctor,
-// date and time.
 appointmentSchema.index(
   {
     doctor: 1,
@@ -54,7 +79,4 @@ appointmentSchema.index(
   }
 );
 
-module.exports = mongoose.model(
-  "Appointment",
-  appointmentSchema
-);
+module.exports = mongoose.model("Appointment", appointmentSchema);

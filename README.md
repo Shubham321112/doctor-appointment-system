@@ -7,9 +7,11 @@ The application provides separate workflows for Patients, Doctors and Admins.
 ## 🚀 Live Demo
 
 ### Frontend
+
 https://doctor-appointment-system-alpha.vercel.app
 
 ### Backend API
+
 https://doctor-appointment-system-p2pw.onrender.com
 
 ## ✨ Features
@@ -85,7 +87,7 @@ https://doctor-appointment-system-p2pw.onrender.com
 
 ```text
 doctor-appointment/
-│
+
 ├── backend/
 │   ├── config/
 │   ├── controllers/

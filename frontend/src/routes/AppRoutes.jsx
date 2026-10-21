@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
@@ -6,6 +7,7 @@ import Signup from "../pages/Signup";
 import Dashboard from "../pages/Dashboard";
 import BookAppointment from "../pages/BookAppointment";
 import MyAppointments from "../pages/MyAppointments";
+import Services from "../pages/Services";
 import DoctorDashboard from "../pages/DoctorDashboard";
 import AdminDashboard from "../pages/AdminDashboard";
 import Profile from "../pages/profile";
@@ -78,22 +80,11 @@ function AdminRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* AUTHENTICATION */}
+      <Route path="/" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
-      {/* ================= AUTHENTICATION ================= */}
-
-      <Route
-        path="/"
-        element={<Login />}
-      />
-
-      <Route
-        path="/signup"
-        element={<Signup />}
-      />
-
-
-      {/* ================= PATIENT ROUTES ================= */}
-
+      {/* PATIENT ROUTES */}
       <Route
         path="/dashboard"
         element={
@@ -121,9 +112,17 @@ function AppRoutes() {
         }
       />
 
+      {/* SERVICES ROUTE */}
+      <Route
+        path="/services"
+        element={
+          <PatientRoute>
+            <Services />
+          </PatientRoute>
+        }
+      />
 
-      {/* ================= DOCTOR ROUTE ================= */}
-
+      {/* DOCTOR ROUTE */}
       <Route
         path="/doctor-dashboard"
         element={
@@ -133,9 +132,7 @@ function AppRoutes() {
         }
       />
 
-
-      {/* ================= ADMIN ROUTE ================= */}
-
+      {/* ADMIN ROUTE */}
       <Route
         path="/admin-dashboard"
         element={
@@ -145,9 +142,7 @@ function AppRoutes() {
         }
       />
 
-
-      {/* ================= PROFILE ================= */}
-
+      {/* PROFILE ROUTE */}
       <Route
         path="/profile"
         element={
@@ -157,14 +152,11 @@ function AppRoutes() {
         }
       />
 
-
-      {/* ================= INVALID URL ================= */}
-
+      {/* INVALID URL */}
       <Route
         path="*"
         element={<Navigate to="/" replace />}
       />
-
     </Routes>
   );
 }
