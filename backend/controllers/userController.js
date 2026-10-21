@@ -1,3 +1,4 @@
+
 const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 
@@ -20,19 +21,14 @@ const getAllUsers = async (req, res) => {
     });
   } catch (error) {
     console.error("Get Users Error:", error);
-
-    res.status(500).json({
-      message: "Server error",
-    });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 // Get All Doctors
 const getAllDoctors = async (req, res) => {
   try {
-    const doctors = await User.find({
-      role: "doctor",
-    })
+    const doctors = await User.find({ role: "doctor" })
       .select("-password")
       .sort({ name: 1 });
 
@@ -42,10 +38,7 @@ const getAllDoctors = async (req, res) => {
     });
   } catch (error) {
     console.error("Get Doctors Error:", error);
-
-    res.status(500).json({
-      message: "Server error",
-    });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -58,18 +51,11 @@ const createDoctor = async (req, res) => {
       });
     }
 
-    const {
-      name,
-      email,
-      contact,
-      password,
-      availability,
-    } = req.body;
+    const { name, email, contact, password, availability } = req.body;
 
     if (!name || !email || !contact || !password) {
       return res.status(400).json({
-        message:
-          "Name, email, contact and password are required",
+        message: "Name, email, contact and password are required",
       });
     }
 
@@ -79,9 +65,8 @@ const createDoctor = async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({
-      email: email.toLowerCase(),
-    });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
       return res.status(400).json({
@@ -91,9 +76,7 @@ const createDoctor = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const doctorAvailability = Array.isArray(
-      availability
-    )
+    const doctorAvailability = Array.isArray(availability)
       ? availability
           .filter(
             (item) =>
@@ -108,9 +91,9 @@ const createDoctor = async (req, res) => {
       : [];
 
     const doctor = await User.create({
-      name,
-      email: email.toLowerCase(),
-      contact,
+      name: name.trim(),
+      email: normalizedEmail,
+      contact: contact.trim(),
       password: hashedPassword,
       role: "doctor",
       availability: doctorAvailability,
@@ -129,11 +112,7 @@ const createDoctor = async (req, res) => {
     });
   } catch (error) {
     console.error("Create Doctor Error:", error);
-
-    res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -142,8 +121,7 @@ const updateDoctorAvailability = async (req, res) => {
   try {
     if (req.userRole !== "admin") {
       return res.status(403).json({
-        message:
-          "Only admin can update doctor availability",
+        message: "Only admin can update doctor availability",
       });
     }
 
@@ -179,8 +157,7 @@ const updateDoctorAvailability = async (req, res) => {
 
     if (cleanedAvailability.length === 0) {
       return res.status(400).json({
-        message:
-          "Please select at least one day and one time slot.",
+        message: "Please select at least one day and one time slot.",
       });
     }
 
@@ -190,13 +167,10 @@ const updateDoctorAvailability = async (req, res) => {
     });
 
     if (!doctor) {
-      return res.status(404).json({
-        message: "Doctor not found",
-      });
+      return res.status(404).json({ message: "Doctor not found" });
     }
 
     doctor.availability = cleanedAvailability;
-
     await doctor.save();
 
     res.status(200).json({
@@ -211,15 +185,65 @@ const updateDoctorAvailability = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(
-      "Update Doctor Availability Error:",
-      error
-    );
+    console.error("Update Doctor Availability Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
-    res.status(500).json({
-      message: "Server error",
-      error: error.message,
+// Update My Profile - Authenticated User
+const updateMyProfile = async (req, res) => {
+  try {
+    const name =
+      typeof req.body.name === "string" ? req.body.name.trim() : "";
+    const contact =
+      typeof req.body.contact === "string"
+        ? req.body.contact.trim()
+        : "";
+
+    if (!name || !contact) {
+      return res.status(400).json({
+        message: "Name and contact number are required",
+      });
+    }
+
+    if (name.length > 100) {
+      return res.status(400).json({
+        message: "Name must be 100 characters or fewer",
+      });
+    }
+
+    if (contact.length > 20) {
+      return res.status(400).json({
+        message: "Contact number must be 20 characters or fewer",
+      });
+    }
+
+    const user = await User.findById(req.user);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    user.name = name;
+    user.contact = contact;
+    await user.save();
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        contact: user.contact,
+        role: user.role,
+      },
     });
+  } catch (error) {
+    console.error("Update My Profile Error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -235,9 +259,7 @@ const deleteUser = async (req, res) => {
     const user = await User.findById(req.params.id);
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      return res.status(404).json({ message: "User not found" });
     }
 
     if (user.role === "admin") {
@@ -253,10 +275,7 @@ const deleteUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete User Error:", error);
-
-    res.status(500).json({
-      message: "Server error",
-    });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -265,5 +284,6 @@ module.exports = {
   getAllDoctors,
   createDoctor,
   updateDoctorAvailability,
+  updateMyProfile,
   deleteUser,
 };
