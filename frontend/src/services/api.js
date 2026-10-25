@@ -1,3 +1,4 @@
+
 const API_URL = "https://doctor-appointment-system-p2pw.onrender.com/api";
 
 const api = {
@@ -5,26 +6,21 @@ const api = {
   // LOGIN
   // =========================
   login: async (email, password) => {
-    const response = await fetch(
-      `${API_URL}/auth/login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-        }),
-      }
-    );
+    const response = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password,
+      }),
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message || "Login failed"
-      );
+      throw new Error(result.message || "Login failed");
     }
 
     return result;
@@ -33,67 +29,74 @@ const api = {
   // =========================
   // REGISTER
   // =========================
-  register: async (
-    name,
-    email,
-    contact,
-    password
-  ) => {
-    const response = await fetch(
-      `${API_URL}/auth/register`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          contact: contact.trim(),
-          password,
-        }),
-      }
-    );
+  register: async (name, email, contact, password) => {
+    const response = await fetch(`${API_URL}/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        contact: contact.trim(),
+        password,
+      }),
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Registration failed"
-      );
+      throw new Error(result.message || "Registration failed");
     }
 
     return result;
   },
 
   // =========================
-  // PROFILE
+  // GET PROFILE
   // =========================
   getProfile: async (token) => {
-    const response = await fetch(
-      `${API_URL}/auth/profile`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/auth/profile`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to fetch profile"
-      );
+      throw new Error(result.message || "Failed to fetch profile");
     }
 
     return result;
   },
 
-  
+  // =========================
+  // UPDATE MY PROFILE
+  // =========================
+  updateMyProfile: async (name, contact, token) => {
+    const response = await fetch(`${API_URL}/users/profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name: name.trim(),
+        contact: contact.trim(),
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to update profile");
+    }
+
+    return result;
+  },
+
   // =========================
   // BOOK APPOINTMENT + REPORTS
   // =========================
@@ -116,50 +119,38 @@ const api = {
       formData.append("reports", file);
     });
 
-    const response = await fetch(
-      `${API_URL}/appointments/book`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      }
-    );
+    const response = await fetch(`${API_URL}/appointments/book`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message || "Failed to book appointment"
-      );
+      throw new Error(result.message || "Failed to book appointment");
     }
 
     return result;
   },
 
-
   // =========================
   // MY APPOINTMENTS
   // =========================
   getMyAppointments: async (token) => {
-    const response = await fetch(
-      `${API_URL}/appointments/my`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/appointments/my`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to fetch appointments"
-      );
+      throw new Error(result.message || "Failed to fetch appointments");
     }
 
     return result;
@@ -169,23 +160,17 @@ const api = {
   // CANCEL APPOINTMENT
   // =========================
   cancelAppointment: async (id, token) => {
-    const response = await fetch(
-      `${API_URL}/appointments/${id}/cancel`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/appointments/${id}/cancel`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to cancel appointment"
-      );
+      throw new Error(result.message || "Failed to cancel appointment");
     }
 
     return result;
@@ -195,23 +180,17 @@ const api = {
   // DOCTOR APPOINTMENTS
   // =========================
   getDoctorAppointments: async (token) => {
-    const response = await fetch(
-      `${API_URL}/appointments/doctor/my`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/appointments/doctor/my`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to fetch doctor appointments"
-      );
+      throw new Error(result.message || "Failed to fetch doctor appointments");
     }
 
     return result;
@@ -220,31 +199,23 @@ const api = {
   // =========================
   // UPDATE APPOINTMENT STATUS
   // =========================
-  updateAppointmentStatus: async (
-    id,
-    status,
-    token
-  ) => {
-    const response = await fetch(
-      `${API_URL}/appointments/${id}/status`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status,
-        }),
-      }
-    );
+  updateAppointmentStatus: async (id, status, token) => {
+    const response = await fetch(`${API_URL}/appointments/${id}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status,
+      }),
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
       throw new Error(
-        result.message ||
-          "Failed to update appointment status"
+        result.message || "Failed to update appointment status"
       );
     }
 
@@ -255,23 +226,17 @@ const api = {
   // ALL APPOINTMENTS - ADMIN
   // =========================
   getAllAppointments: async (token) => {
-    const response = await fetch(
-      `${API_URL}/appointments/all`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/appointments/all`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to fetch all appointments"
-      );
+      throw new Error(result.message || "Failed to fetch all appointments");
     }
 
     return result;
@@ -281,23 +246,17 @@ const api = {
   // DELETE APPOINTMENT - ADMIN
   // =========================
   deleteAppointment: async (id, token) => {
-    const response = await fetch(
-      `${API_URL}/appointments/${id}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/appointments/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to delete appointment"
-      );
+      throw new Error(result.message || "Failed to delete appointment");
     }
 
     return result;
@@ -307,23 +266,17 @@ const api = {
   // ALL USERS - ADMIN
   // =========================
   getAllUsers: async (token) => {
-    const response = await fetch(
-      `${API_URL}/users/all`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/users/all`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to fetch users"
-      );
+      throw new Error(result.message || "Failed to fetch users");
     }
 
     return result;
@@ -333,23 +286,17 @@ const api = {
   // ALL DOCTORS
   // =========================
   getAllDoctors: async (token) => {
-    const response = await fetch(
-      `${API_URL}/users/doctors`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/users/doctors`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to fetch doctors"
-      );
+      throw new Error(result.message || "Failed to fetch doctors");
     }
 
     return result;
@@ -358,29 +305,20 @@ const api = {
   // =========================
   // CREATE DOCTOR - ADMIN
   // =========================
-  createDoctor: async (
-    doctorData,
-    token
-  ) => {
-    const response = await fetch(
-      `${API_URL}/users/doctor`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(doctorData),
-      }
-    );
+  createDoctor: async (doctorData, token) => {
+    const response = await fetch(`${API_URL}/users/doctor`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(doctorData),
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to create doctor"
-      );
+      throw new Error(result.message || "Failed to create doctor");
     }
 
     return result;
@@ -389,11 +327,7 @@ const api = {
   // =========================
   // UPDATE DOCTOR AVAILABILITY
   // =========================
-  updateDoctorAvailability: async (
-    id,
-    availability,
-    token
-  ) => {
+  updateDoctorAvailability: async (id, availability, token) => {
     const response = await fetch(
       `${API_URL}/users/doctor/${id}/availability`,
       {
@@ -412,8 +346,7 @@ const api = {
 
     if (!response.ok) {
       throw new Error(
-        result.message ||
-          "Failed to update doctor availability"
+        result.message || "Failed to update doctor availability"
       );
     }
 
@@ -424,23 +357,17 @@ const api = {
   // DELETE USER - ADMIN
   // =========================
   deleteUser: async (id, token) => {
-    const response = await fetch(
-      `${API_URL}/users/${id}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await fetch(`${API_URL}/users/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        result.message ||
-          "Failed to delete user"
-      );
+      throw new Error(result.message || "Failed to delete user");
     }
 
     return result;

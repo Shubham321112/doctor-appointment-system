@@ -1,12 +1,28 @@
+
 import { createSlice } from "@reduxjs/toolkit";
 
-const savedUser = localStorage.getItem("user");
-const savedToken = localStorage.getItem("token");
+const getSavedUser = () => {
+  try {
+    const savedUser = localStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  } catch {
+    localStorage.removeItem("user");
+    return null;
+  }
+};
+
+const getSavedToken = () => {
+  try {
+    return localStorage.getItem("token") || null;
+  } catch {
+    return null;
+  }
+};
 
 const initialState = {
-  user: savedUser ? JSON.parse(savedUser) : null,
-  token: savedToken || null,
-  isAuthenticated: !!savedToken,
+  user: getSavedUser(),
+  token: getSavedToken(),
+  isAuthenticated: !!getSavedToken(),
 };
 
 const authSlice = createSlice({
@@ -15,20 +31,31 @@ const authSlice = createSlice({
 
   reducers: {
     loginSuccess: (state, action) => {
-      state.user = action.payload.user;
-      state.token = action.payload.token;
-      state.isAuthenticated = true;
+      const { user, token } = action.payload;
 
-      // Save login data
-      localStorage.setItem(
-        "user",
-        JSON.stringify(action.payload.user)
-      );
+      state.user = user;
+      state.token = token;
+      state.isAuthenticated = !!token;
 
-      localStorage.setItem(
-        "token",
-        action.payload.token
-      );
+      try {
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("token", token);
+      } catch (error) {
+        console.error("Unable to save login data:", error);
+      }
+    },
+
+    updateUser: (state, action) => {
+      state.user = {
+        ...state.user,
+        ...action.payload,
+      };
+
+      try {
+        localStorage.setItem("user", JSON.stringify(state.user));
+      } catch (error) {
+        console.error("Unable to save updated user:", error);
+      }
     },
 
     logout: (state) => {
@@ -36,12 +63,16 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
 
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
+      try {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      } catch (error) {
+        console.error("Unable to clear login data:", error);
+      }
     },
   },
 });
 
-export const { loginSuccess, logout } = authSlice.actions;
+export const { loginSuccess, updateUser, logout } = authSlice.actions;
 
 export default authSlice.reducer;
