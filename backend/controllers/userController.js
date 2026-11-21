@@ -15,13 +15,15 @@ const getAllUsers = async (req, res) => {
       .select("-password")
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Users fetched successfully",
       users,
     });
   } catch (error) {
     console.error("Get Users Error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -32,13 +34,15 @@ const getAllDoctors = async (req, res) => {
       .select("-password")
       .sort({ name: 1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Doctors fetched successfully",
       doctors,
     });
   } catch (error) {
     console.error("Get Doctors Error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -51,7 +55,16 @@ const createDoctor = async (req, res) => {
       });
     }
 
-    const { name, email, contact, password, availability } = req.body;
+    const {
+      name,
+      email,
+      contact,
+      password,
+      availability,
+      specialization,
+      image,
+      rating,
+    } = req.body;
 
     if (!name || !email || !contact || !password) {
       return res.status(400).json({
@@ -65,8 +78,56 @@ const createDoctor = async (req, res) => {
       });
     }
 
+    if (
+      specialization !== undefined &&
+      typeof specialization !== "string"
+    ) {
+      return res.status(400).json({
+        message: "Specialization must be text",
+      });
+    }
+
+    if (image !== undefined && typeof image !== "string") {
+      return res.status(400).json({
+        message: "Image must be a URL string",
+      });
+    }
+
+    if (image) {
+      try {
+        const parsedUrl = new URL(image.trim());
+
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+          throw new Error("Invalid protocol");
+        }
+      } catch {
+        return res.status(400).json({
+          message: "Please provide a valid HTTP or HTTPS image URL",
+        });
+      }
+    }
+
+    let doctorRating = null;
+
+    if (rating !== undefined && rating !== null && rating !== "") {
+      doctorRating = Number(rating);
+
+      if (
+        !Number.isFinite(doctorRating) ||
+        doctorRating < 0 ||
+        doctorRating > 5
+      ) {
+        return res.status(400).json({
+          message: "Rating must be between 0 and 5",
+        });
+      }
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+    });
 
     if (existingUser) {
       return res.status(400).json({
@@ -76,17 +137,27 @@ const createDoctor = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const validDays = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
+
     const doctorAvailability = Array.isArray(availability)
       ? availability
           .filter(
             (item) =>
-              item.day &&
-              Array.isArray(item.slots) &&
-              item.slots.length > 0
+              item &&
+              validDays.includes(item.day) &&
+              Array.isArray(item.slots)
           )
           .map((item) => ({
             day: item.day,
-            slots: item.slots,
+            slots: [...new Set(item.slots)],
           }))
       : [];
 
@@ -96,10 +167,13 @@ const createDoctor = async (req, res) => {
       contact: contact.trim(),
       password: hashedPassword,
       role: "doctor",
+      specialization: specialization?.trim() || "",
+      image: image?.trim() || "",
+      rating: doctorRating,
       availability: doctorAvailability,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Doctor created successfully",
       doctor: {
         id: doctor._id,
@@ -107,12 +181,24 @@ const createDoctor = async (req, res) => {
         email: doctor.email,
         contact: doctor.contact,
         role: doctor.role,
+        specialization: doctor.specialization,
+        image: doctor.image,
+        rating: doctor.rating,
         availability: doctor.availability,
       },
     });
   } catch (error) {
     console.error("Create Doctor Error:", error);
-    res.status(500).json({ message: "Server error" });
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "A user with this email already exists",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -146,6 +232,7 @@ const updateDoctorAvailability = async (req, res) => {
     const cleanedAvailability = availability
       .filter(
         (item) =>
+          item &&
           validDays.includes(item.day) &&
           Array.isArray(item.slots) &&
           item.slots.length > 0
@@ -167,13 +254,15 @@ const updateDoctorAvailability = async (req, res) => {
     });
 
     if (!doctor) {
-      return res.status(404).json({ message: "Doctor not found" });
+      return res.status(404).json({
+        message: "Doctor not found",
+      });
     }
 
     doctor.availability = cleanedAvailability;
     await doctor.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Doctor availability updated successfully",
       doctor: {
         id: doctor._id,
@@ -181,12 +270,132 @@ const updateDoctorAvailability = async (req, res) => {
         email: doctor.email,
         contact: doctor.contact,
         role: doctor.role,
+        specialization: doctor.specialization,
+        image: doctor.image,
+        rating: doctor.rating,
         availability: doctor.availability,
       },
     });
   } catch (error) {
     console.error("Update Doctor Availability Error:", error);
-    res.status(500).json({ message: "Server error" });
+
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
+// Update Doctor Profile - Admin
+const updateDoctorProfile = async (req, res) => {
+  try {
+    if (req.userRole !== "admin") {
+      return res.status(403).json({
+        message: "Only admin can update doctor profiles",
+      });
+    }
+
+    const { specialization, image, rating } = req.body;
+
+    if (
+      specialization !== undefined &&
+      typeof specialization !== "string"
+    ) {
+      return res.status(400).json({
+        message: "Specialization must be text",
+      });
+    }
+
+    if (image !== undefined && typeof image !== "string") {
+      return res.status(400).json({
+        message: "Image must be a URL string",
+      });
+    }
+
+    if (image && image.trim()) {
+      try {
+        const parsedUrl = new URL(image.trim());
+
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+          throw new Error("Invalid protocol");
+        }
+      } catch {
+        return res.status(400).json({
+          message: "Please provide a valid HTTP or HTTPS image URL",
+        });
+      }
+    }
+
+    let doctorRating;
+
+    if (rating !== undefined) {
+      if (rating === null || rating === "") {
+        doctorRating = null;
+      } else {
+        doctorRating = Number(rating);
+
+        if (
+          !Number.isFinite(doctorRating) ||
+          doctorRating < 0 ||
+          doctorRating > 5
+        ) {
+          return res.status(400).json({
+            message: "Rating must be between 0 and 5",
+          });
+        }
+      }
+    }
+
+    const doctor = await User.findOne({
+      _id: req.params.id,
+      role: "doctor",
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Doctor not found",
+      });
+    }
+
+    if (specialization !== undefined) {
+      doctor.specialization = specialization.trim();
+    }
+
+    if (image !== undefined) {
+      doctor.image = image.trim();
+    }
+
+    if (rating !== undefined) {
+      doctor.rating = doctorRating;
+    }
+
+    await doctor.save();
+
+    return res.status(200).json({
+      message: "Doctor profile updated successfully",
+      doctor: {
+        id: doctor._id,
+        name: doctor.name,
+        email: doctor.email,
+        contact: doctor.contact,
+        role: doctor.role,
+        specialization: doctor.specialization,
+        image: doctor.image,
+        rating: doctor.rating,
+        availability: doctor.availability,
+      },
+    });
+  } catch (error) {
+    console.error("Update Doctor Profile Error:", error);
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        message: "Invalid doctor ID",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -194,7 +403,10 @@ const updateDoctorAvailability = async (req, res) => {
 const updateMyProfile = async (req, res) => {
   try {
     const name =
-      typeof req.body.name === "string" ? req.body.name.trim() : "";
+      typeof req.body.name === "string"
+        ? req.body.name.trim()
+        : "";
+
     const contact =
       typeof req.body.contact === "string"
         ? req.body.contact.trim()
@@ -228,9 +440,10 @@ const updateMyProfile = async (req, res) => {
 
     user.name = name;
     user.contact = contact;
+
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Profile updated successfully",
       user: {
         id: user._id,
@@ -243,7 +456,10 @@ const updateMyProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Update My Profile Error:", error);
-    res.status(500).json({ message: "Server error" });
+
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -259,7 +475,9 @@ const deleteUser = async (req, res) => {
     const user = await User.findById(req.params.id);
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
 
     if (user.role === "admin") {
@@ -270,12 +488,21 @@ const deleteUser = async (req, res) => {
 
     await User.findByIdAndDelete(req.params.id);
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "User deleted successfully",
     });
   } catch (error) {
     console.error("Delete User Error:", error);
-    res.status(500).json({ message: "Server error" });
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        message: "Invalid user ID",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -284,6 +511,7 @@ module.exports = {
   getAllDoctors,
   createDoctor,
   updateDoctorAvailability,
+  updateDoctorProfile,
   updateMyProfile,
   deleteUser,
 };

@@ -6,6 +6,7 @@ const {
   getAllDoctors,
   createDoctor,
   updateDoctorAvailability,
+  updateDoctorProfile,
   updateMyProfile,
   deleteUser,
 } = require("../controllers/userController");
@@ -25,6 +26,13 @@ router.get("/all", authMiddleware, getAllUsers);
 
 // Create doctor - Admin
 router.post("/doctor", authMiddleware, createDoctor);
+
+// Update doctor profile - Admin
+router.put(
+  "/doctor/:id",
+  authMiddleware,
+  updateDoctorProfile
+);
 
 // Update doctor availability - Admin
 router.put(

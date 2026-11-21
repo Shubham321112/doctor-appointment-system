@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const availabilitySchema = new mongoose.Schema(
@@ -55,6 +56,25 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["patient", "doctor", "admin"],
       default: "patient",
+    },
+
+    specialization: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    image: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    rating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: null,
     },
 
     availability: {

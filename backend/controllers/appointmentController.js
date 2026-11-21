@@ -1,3 +1,4 @@
+
 const Appointment = require("../models/Appointment");
 const User = require("../models/user");
 
@@ -44,7 +45,7 @@ const hasValidSignature = (file) => {
   return false;
 };
 
-// Never send the binary contents of reports in normal responses.
+// Never send binary report contents in normal responses.
 const safeAppointment = (appointment) => {
   const data = appointment.toObject
     ? appointment.toObject()
@@ -233,6 +234,7 @@ const createAppointment = async (req, res) => {
 };
 
 // Get My Appointments - Patient
+// Includes doctor image, specialization and rating from the database.
 const getMyAppointments = async (req, res) => {
   try {
     if (req.userRole !== "patient") {
@@ -246,11 +248,62 @@ const getMyAppointments = async (req, res) => {
     })
       .select("-reports.fileData")
       .populate("patient", "name email contact")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Find the doctor profiles associated with these appointments.
+    const doctorNames = [
+      ...new Set(
+        appointments
+          .map((appointment) => appointment.doctor?.trim())
+          .filter(Boolean)
+      ),
+    ];
+
+    const doctors = doctorNames.length
+      ? await User.find({
+          role: "doctor",
+          name: { $in: doctorNames },
+        })
+          .select("name specialization image rating")
+          .lean()
+      : [];
+
+    // Index profiles by name.
+    const doctorsByName = new Map(
+      doctors.map((doctor) => [
+        doctor.name.trim().toLowerCase(),
+        doctor,
+      ])
+    );
+
+    // Attach the doctor's profile to each appointment.
+    const appointmentsWithDoctorDetails = appointments.map(
+      (appointment) => {
+        const doctorKey = appointment.doctor
+          ?.trim()
+          .toLowerCase();
+
+        const doctorProfile = doctorsByName.get(doctorKey);
+
+        return {
+          ...appointment,
+          doctorDetails: doctorProfile
+            ? {
+                name: doctorProfile.name,
+                specialization:
+                  doctorProfile.specialization || "",
+                image: doctorProfile.image || "",
+                rating: doctorProfile.rating ?? null,
+              }
+            : null,
+        };
+      }
+    );
 
     return res.status(200).json({
       message: "Appointments fetched successfully",
-      appointments: safeAppointments(appointments),
+      appointments: appointmentsWithDoctorDetails,
     });
   } catch (error) {
     console.error("Get Appointments Error:", error);
@@ -320,7 +373,7 @@ const getDoctorAppointments = async (req, res) => {
     }
 
     const doctorUser = await User.findById(req.user).select(
-      "name email contact role availability"
+      "name email contact role availability specialization image rating"
     );
 
     if (!doctorUser) {
@@ -343,6 +396,9 @@ const getDoctorAppointments = async (req, res) => {
         name: doctorUser.name,
         email: doctorUser.email,
         contact: doctorUser.contact,
+        specialization: doctorUser.specialization || "",
+        image: doctorUser.image || "",
+        rating: doctorUser.rating ?? null,
         availability: doctorUser.availability,
       },
       appointments: safeAppointments(appointments),

@@ -33,11 +33,9 @@ function Header({ user, onLogout }) {
     const reader = new FileReader();
 
     reader.onload = () => {
-      const image = reader.result;
-
       try {
-        localStorage.setItem("patientProfileImage", image);
-        setProfileImage(image);
+        localStorage.setItem("patientProfileImage", reader.result);
+        setProfileImage(reader.result);
       } catch {
         alert("Image could not be saved. Please choose a smaller image.");
       }
@@ -52,10 +50,10 @@ function Header({ user, onLogout }) {
   };
 
   const navClass = (path) =>
-    `rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
+    `whitespace-nowrap rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 ${
       location.pathname === path
-        ? "bg-teal-50 text-teal-700"
-        : "text-slate-600 hover:bg-slate-100 hover:text-teal-700"
+        ? "bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-100"
+        : "text-slate-600 hover:bg-slate-50 hover:text-teal-700"
     }`;
 
   const menuClass = (path) =>
@@ -68,13 +66,14 @@ function Header({ user, onLogout }) {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+          {/* Brand and menu button */}
           <div className="flex shrink-0 items-center gap-3">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
               aria-label="Open patient menu"
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-2xl text-slate-700 transition hover:bg-slate-100"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-xl text-slate-700 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
             >
               ☰
             </button>
@@ -82,9 +81,9 @@ function Header({ user, onLogout }) {
             <button
               type="button"
               onClick={() => goTo("/dashboard")}
-              className="flex items-center gap-3 text-left"
+              className="flex items-center gap-2.5 text-left"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-600 text-2xl text-white shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-2xl font-bold text-white shadow-sm">
                 +
               </div>
 
@@ -97,8 +96,10 @@ function Header({ user, onLogout }) {
             </button>
           </div>
 
-          <nav className="hidden items-center gap-1 lg:flex">
+          {/* Desktop navigation with proper spacing */}
+          <nav className="hidden items-center gap-3 lg:flex xl:gap-4">
             <button
+              type="button"
               onClick={() => goTo("/dashboard")}
               className={navClass("/dashboard")}
             >
@@ -106,6 +107,7 @@ function Header({ user, onLogout }) {
             </button>
 
             <button
+              type="button"
               onClick={() => goTo("/book-appointment")}
               className={navClass("/book-appointment")}
             >
@@ -113,6 +115,7 @@ function Header({ user, onLogout }) {
             </button>
 
             <button
+              type="button"
               onClick={() => goTo("/my-appointments")}
               className={navClass("/my-appointments")}
             >
@@ -120,6 +123,7 @@ function Header({ user, onLogout }) {
             </button>
 
             <button
+              type="button"
               onClick={() => goTo("/services")}
               className={navClass("/services")}
             >
@@ -127,6 +131,7 @@ function Header({ user, onLogout }) {
             </button>
 
             <button
+              type="button"
               onClick={() => goTo("/profile")}
               className={navClass("/profile")}
             >
@@ -137,13 +142,14 @@ function Header({ user, onLogout }) {
           <button
             type="button"
             onClick={onLogout}
-            className="shrink-0 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:px-4"
+            className="shrink-0 rounded-xl border border-red-200 px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:px-4"
           >
             Logout
           </button>
         </div>
       </header>
 
+      {/* Slide-out patient menu */}
       {menuOpen && (
         <div className="fixed inset-0 z-50">
           <button
@@ -208,12 +214,13 @@ function Header({ user, onLogout }) {
               </div>
             </div>
 
-            <div className="flex-1 space-y-1 px-3 py-4">
+            <div className="flex-1 space-y-2 px-3 py-4">
               <p className="px-3 pb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                 Patient Menu
               </p>
 
               <button
+                type="button"
                 onClick={() => goTo("/dashboard")}
                 className={menuClass("/dashboard")}
               >
@@ -222,6 +229,7 @@ function Header({ user, onLogout }) {
               </button>
 
               <button
+                type="button"
                 onClick={() => goTo("/profile")}
                 className={menuClass("/profile")}
               >
@@ -230,6 +238,7 @@ function Header({ user, onLogout }) {
               </button>
 
               <button
+                type="button"
                 onClick={() => goTo("/book-appointment")}
                 className={menuClass("/book-appointment")}
               >
@@ -238,6 +247,7 @@ function Header({ user, onLogout }) {
               </button>
 
               <button
+                type="button"
                 onClick={() => goTo("/my-appointments")}
                 className={menuClass("/my-appointments")}
               >
@@ -246,6 +256,7 @@ function Header({ user, onLogout }) {
               </button>
 
               <button
+                type="button"
                 onClick={() => goTo("/services")}
                 className={menuClass("/services")}
               >
@@ -256,6 +267,7 @@ function Header({ user, onLogout }) {
 
             <div className="border-t border-slate-100 p-4">
               <button
+                type="button"
                 onClick={() => {
                   setMenuOpen(false);
                   onLogout?.();

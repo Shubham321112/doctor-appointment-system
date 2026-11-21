@@ -1,5 +1,30 @@
 
-const API_URL = "https://doctor-appointment-system-p2pw.onrender.com/api";
+const API_URL = "http://localhost:5000/api";
+
+// =========================
+// COMMON RESPONSE HANDLER
+// =========================
+const handleResponse = async (response, errorMessage) => {
+  const responseText = await response.text();
+
+  let result;
+
+  try {
+    result = responseText ? JSON.parse(responseText) : {};
+  } catch (error) {
+    throw new Error(
+      `Server returned invalid response (HTTP ${response.status}). ` +
+      `Expected JSON but received HTML or invalid data. ` +
+      `Please check your backend URL and server status.`
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(result.message || errorMessage);
+  }
+
+  return result;
+};
 
 const api = {
   // =========================
@@ -17,13 +42,7 @@ const api = {
       }),
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Login failed");
-    }
-
-    return result;
+    return handleResponse(response, "Login failed");
   },
 
   // =========================
@@ -43,13 +62,7 @@ const api = {
       }),
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Registration failed");
-    }
-
-    return result;
+    return handleResponse(response, "Registration failed");
   },
 
   // =========================
@@ -63,13 +76,7 @@ const api = {
       },
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to fetch profile");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to fetch profile");
   },
 
   // =========================
@@ -88,13 +95,7 @@ const api = {
       }),
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to update profile");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to update profile");
   },
 
   // =========================
@@ -127,13 +128,7 @@ const api = {
       body: formData,
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to book appointment");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to book appointment");
   },
 
   // =========================
@@ -147,13 +142,7 @@ const api = {
       },
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to fetch appointments");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to fetch appointments");
   },
 
   // =========================
@@ -167,13 +156,7 @@ const api = {
       },
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to cancel appointment");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to cancel appointment");
   },
 
   // =========================
@@ -187,13 +170,7 @@ const api = {
       },
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to fetch doctor appointments");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to fetch doctor appointments");
   },
 
   // =========================
@@ -206,20 +183,10 @@ const api = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        status,
-      }),
+      body: JSON.stringify({ status }),
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        result.message || "Failed to update appointment status"
-      );
-    }
-
-    return result;
+    return handleResponse(response, "Failed to update appointment status");
   },
 
   // =========================
@@ -233,13 +200,7 @@ const api = {
       },
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to fetch all appointments");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to fetch all appointments");
   },
 
   // =========================
@@ -253,13 +214,7 @@ const api = {
       },
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to delete appointment");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to delete appointment");
   },
 
   // =========================
@@ -273,13 +228,7 @@ const api = {
       },
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to fetch users");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to fetch users");
   },
 
   // =========================
@@ -293,13 +242,7 @@ const api = {
       },
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to fetch doctors");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to fetch doctors");
   },
 
   // =========================
@@ -315,13 +258,23 @@ const api = {
       body: JSON.stringify(doctorData),
     });
 
-    const result = await response.json();
+    return handleResponse(response, "Failed to create doctor");
+  },
 
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to create doctor");
-    }
+  // =========================
+  // UPDATE DOCTOR PROFILE - ADMIN
+  // =========================
+  updateDoctorProfile: async (id, doctorData, token) => {
+    const response = await fetch(`${API_URL}/users/doctor/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(doctorData),
+    });
 
-    return result;
+    return handleResponse(response, "Failed to update doctor profile");
   },
 
   // =========================
@@ -336,21 +289,11 @@ const api = {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          availability,
-        }),
+        body: JSON.stringify({ availability }),
       }
     );
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        result.message || "Failed to update doctor availability"
-      );
-    }
-
-    return result;
+    return handleResponse(response, "Failed to update doctor availability");
   },
 
   // =========================
@@ -364,13 +307,7 @@ const api = {
       },
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || "Failed to delete user");
-    }
-
-    return result;
+    return handleResponse(response, "Failed to delete user");
   },
 };
 

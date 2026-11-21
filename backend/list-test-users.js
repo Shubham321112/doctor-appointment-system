@@ -1,5 +1,4 @@
 require("dotenv").config();
-
 const mongoose = require("mongoose");
 const readline = require("readline");
 const User = require("./models/user");
@@ -12,10 +11,7 @@ async function main() {
 
     await mongoose.connect(process.env.MONGO_URI);
 
-    const dbName = mongoose.connection.name;
-
-    console.log("\nConnected database:", dbName);
-    console.log("Before proceeding, confirm this is your TEST database.");
+    console.log("\nConnected database:", mongoose.connection.name);
 
     const rl = readline.createInterface({
       input: process.stdin,
@@ -23,31 +19,29 @@ async function main() {
     });
 
     rl.question(
-      'Type "CONFIRM TEST DB" to list registered users: ',
+      'Type "CONFIRM TEST DB" to list doctors: ',
       async (answer) => {
         try {
           if (answer.trim() !== "CONFIRM TEST DB") {
-            console.log("Cancelled. No user data displayed.");
+            console.log("Cancelled.");
             return;
           }
 
           const users = await User.find({})
-            .select("name email role")
+            .select("name role specialization rating availability")
             .lean();
 
-          if (users.length === 0) {
-            console.log("No registered users found.");
-          } else {
-            console.table(
-              users.map(({ name, email, role }) => ({
-                name,
-                email,
-                role,
-              }))
-            );
-          }
+          console.table(
+            users.map((user) => ({
+              name: user.name,
+              role: user.role,
+              specialization: user.specialization || "NOT SET",
+              rating: user.rating ?? "Not available",
+              availableDays: user.availability?.length || 0,
+            }))
+          );
         } catch (error) {
-          console.error("Could not list users:", error.message);
+          console.error("Error:", error.message);
         } finally {
           rl.close();
           await mongoose.disconnect();

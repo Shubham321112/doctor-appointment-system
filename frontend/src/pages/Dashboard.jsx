@@ -1,13 +1,20 @@
 
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+
+import api from "../services/api";
 import Header from "../components/Header";
 import { logout } from "../store/authSlice";
 
 function Dashboard() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
+  const { user, token } = useSelector((state) => state.auth);
+
+  const [doctors, setDoctors] = useState([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [doctorError, setDoctorError] = useState("");
 
   const firstName = user?.name?.trim()?.split(/\s+/)[0] || "Patient";
 
@@ -15,6 +22,42 @@ function Dashboard() {
     dispatch(logout());
     navigate("/", { replace: true });
   };
+
+  // Fetch doctors from the existing API
+  useEffect(() => {
+    let active = true;
+
+    const loadDoctors = async () => {
+      try {
+        setLoadingDoctors(true);
+        setDoctorError("");
+
+        const result = await api.getAllDoctors(token);
+
+        if (active) {
+          setDoctors(result.doctors || []);
+        }
+      } catch (error) {
+        if (active) {
+          setDoctorError(error.message || "Unable to load doctors.");
+        }
+      } finally {
+        if (active) {
+          setLoadingDoctors(false);
+        }
+      }
+    };
+
+    if (token && user?.role === "patient") {
+      loadDoctors();
+    } else {
+      setLoadingDoctors(false);
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [token, user?.role]);
 
   const services = [
     {
@@ -162,11 +205,8 @@ function Dashboard() {
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-blue-600 text-lg font-bold text-white">
               {firstName.charAt(0).toUpperCase()}
             </div>
-
             <div className="min-w-0">
-              <p className="text-xs font-medium text-slate-500">
-                Signed in as
-              </p>
+              <p className="text-xs font-medium text-slate-500">Signed in as</p>
               <p className="max-w-44 truncate text-sm font-bold text-slate-900">
                 {user?.name || "Patient"}
               </p>
@@ -180,11 +220,6 @@ function Dashboard() {
             aria-hidden="true"
             className="pointer-events-none absolute -right-20 -top-24 -z-10 h-72 w-72 rounded-full border-[45px] border-white/[0.07]"
           />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-32 right-1/3 -z-10 h-64 w-64 rounded-full bg-cyan-300/10 blur-3xl"
-          />
-
           <div className="relative grid gap-8 px-6 py-8 sm:px-9 sm:py-10 lg:grid-cols-[1fr_auto] lg:items-center lg:px-12 lg:py-12">
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-cyan-50">
@@ -207,23 +242,21 @@ function Dashboard() {
                 <button
                   type="button"
                   onClick={() => navigate("/book-appointment")}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#163e61] shadow-md transition hover:-translate-y-0.5 hover:bg-cyan-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#163e61] shadow-md transition hover:-translate-y-0.5 hover:bg-cyan-50"
                 >
-                  <span>Book an Appointment</span>
-                  <span aria-hidden="true">→</span>
+                  Book an Appointment →
                 </button>
 
                 <button
                   type="button"
                   onClick={() => navigate("/my-appointments")}
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
                 >
                   View my appointments
                 </button>
               </div>
             </div>
 
-            {/* Decorative healthcare illustration */}
             <div className="hidden lg:flex lg:items-center lg:justify-center">
               <div className="flex h-44 w-44 items-center justify-center rounded-full border border-white/20 bg-white/10 shadow-inner">
                 <div className="flex h-28 w-28 items-center justify-center rounded-[2rem] border border-white/30 bg-white/15 shadow-xl">
@@ -250,7 +283,6 @@ function Dashboard() {
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-sm font-bold text-white">
                 {firstName.charAt(0).toUpperCase()}
               </div>
-
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-white">
                   {user?.name || "Patient"}
@@ -260,7 +292,6 @@ function Dashboard() {
                 </p>
               </div>
             </div>
-
             <span className="w-fit rounded-full border border-emerald-200/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-semibold capitalize text-emerald-100">
               {user?.role || "Patient"} account
             </span>
@@ -273,11 +304,9 @@ function Dashboard() {
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">
               Account overview
             </p>
-
             <h2 className="mt-2 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
               Your details at a glance
             </h2>
-
             <p className="mt-1.5 text-sm leading-6 text-slate-500">
               Your registered information, all in one place.
             </p>
@@ -287,7 +316,7 @@ function Dashboard() {
             {accountDetails.map((detail) => (
               <article
                 key={detail.label}
-                className="group flex min-w-0 items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md sm:p-6"
+                className="group flex min-w-0 items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-6"
               >
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ${colorStyles[detail.color].icon}`}
@@ -296,7 +325,6 @@ function Dashboard() {
                     {detailIcons[detail.icon]}
                   </span>
                 </div>
-
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     {detail.label}
@@ -310,6 +338,122 @@ function Dashboard() {
           </div>
         </section>
 
+        {/* Available doctors */}
+        <section className="mt-10 sm:mt-12">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">
+                Our medical team
+              </p>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                Available Doctors
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Explore our doctors and choose the right specialist for your
+                consultation.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/book-appointment")}
+              className="w-fit rounded-xl border border-teal-200 bg-white px-4 py-2.5 text-sm font-bold text-teal-700 transition hover:bg-teal-50"
+            >
+              Book appointment →
+            </button>
+          </div>
+
+          {loadingDoctors ? (
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+              Loading doctors...
+            </div>
+          ) : doctorError ? (
+            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+              {doctorError}
+              <button
+                type="button"
+                onClick={() => navigate("/book-appointment")}
+                className="ml-2 font-bold underline"
+              >
+                Open booking page
+              </button>
+            </div>
+          ) : doctors.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+              No doctors are currently available.
+            </div>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {doctors.slice(0, 6).map((doctor) => {
+                const doctorImage =
+                  doctor.image ||
+                  doctor.profileImage ||
+                  doctor.photo ||
+                  doctor.avatar;
+
+                return (
+                  <article
+                    key={doctor._id}
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div className="flex items-center gap-4 p-5">
+                      {doctorImage ? (
+                        <img
+                          src={doctorImage}
+                          alt={doctor.name || "Doctor"}
+                          className="h-16 w-16 shrink-0 rounded-2xl object-cover"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-blue-600 text-2xl font-bold text-white">
+                          {doctor.name?.trim()?.charAt(0)?.toUpperCase() || "D"}
+                        </div>
+                      )}
+
+                      <div className="min-w-0">
+                        <h3 className="break-words text-base font-bold text-slate-900">
+                          {doctor.name || "Doctor"}
+                        </h3>
+                        <p className="mt-1 text-sm text-teal-700">
+                          {doctor.specialization || "Medical professional"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 px-5 py-4">
+                      <p className="text-xs text-slate-500">
+                        Consultation availability
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">
+                        {doctor.availability?.length
+                          ? `${doctor.availability.length} scheduled day(s)`
+                          : "Contact for availability"}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate("/book-appointment")}
+                        className="mt-4 w-full rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-teal-800"
+                      >
+                        Book with this doctor →
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+
+          {doctors.length > 6 && (
+            <p className="mt-4 text-center text-sm text-slate-500">
+              Showing 6 of {doctors.length} doctors. Visit Book Appointment to
+              see the full list.
+            </p>
+          )}
+        </section>
+
         {/* Patient services */}
         <section className="mt-10 sm:mt-12">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -317,16 +461,13 @@ function Dashboard() {
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-700">
                 Patient services
               </p>
-
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                 How can we help you?
               </h2>
-
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                 Choose a service to get started with your healthcare.
               </p>
             </div>
-
             <span className="w-fit rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
               3 services available
             </span>
@@ -346,7 +487,6 @@ function Dashboard() {
                       {icons[service.icon]}
                     </span>
                   </div>
-
                   <span
                     className={`text-sm font-bold tracking-widest ${colorStyles[service.color].number}`}
                   >
@@ -357,7 +497,6 @@ function Dashboard() {
                 <h3 className="mt-5 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
                   {service.title}
                 </h3>
-
                 <p className="mt-3 flex-1 text-sm leading-7 text-slate-500">
                   {service.description}
                 </p>
@@ -365,7 +504,7 @@ function Dashboard() {
                 <button
                   type="button"
                   onClick={() => navigate(service.path)}
-                  className={`mt-6 flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${colorStyles[service.color].button}`}
+                  className={`mt-6 flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm font-bold transition ${colorStyles[service.color].button}`}
                 >
                   {service.label}
                   <span
@@ -388,11 +527,9 @@ function Dashboard() {
                 <span className="h-2 w-2 rounded-full bg-teal-500" />
                 Your wellbeing matters
               </div>
-
               <h2 className="mt-3 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                 Make time for your health.
               </h2>
-
               <p className="mt-2 text-sm leading-7 text-slate-600">
                 Ready for your next consultation? Schedule an appointment and
                 keep your healthcare plans organized.
@@ -402,10 +539,9 @@ function Dashboard() {
             <button
               type="button"
               onClick={() => navigate("/book-appointment")}
-              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-800 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+              className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-800 hover:shadow-md"
             >
-              Get started
-              <span aria-hidden="true">→</span>
+              Get started →
             </button>
           </div>
         </section>
